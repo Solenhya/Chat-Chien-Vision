@@ -1,0 +1,23 @@
+services:
+  postgres:
+    image: postgres:16
+    volumes:
+      - $VOLUME/postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+  myapp:
+    build:
+      context: .       # Folder containing the Dockerfile
+      dockerfile: Dockerfile.fastapi 
+    image: chat-chien:latest  # Optional: give it a name
+    ports:
+      - "8000:8000"
+    environment:
+      - ENV=production
+
+volumes:
+  postgres_data:
