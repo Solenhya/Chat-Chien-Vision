@@ -1,0 +1,17 @@
+FROM python:3.12
+
+RUN apt-get update
+RUN apt-get install -y --no-install-recommends \
+        libpq-dev \
+        postgresql-client &&\
+        rm -rf /var/lib/apt/lists/*
+
+
+WORKDIR /cats_and_dogs
+COPY requirements/ requirements/
+RUN pip install --no-cache-dir -r requirements/base.txt 
+
+COPY . /cats_and_dogs
+
+# Lancer l'application avec uvicorn
+CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
