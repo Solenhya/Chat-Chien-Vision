@@ -5,11 +5,16 @@ from .db_connection import get_session
 
 
 def create_prediction(file_path,success,prediction=None,predictiontime=None,predictiondate=None):
+    #Si le filepath est un objet path de pathlib
+    if not isinstance(file_path,str):
+        file_path = str(file_path)
     kargs = {"file_path":file_path,"prediction":prediction,"prediction_time":predictiontime,"prediction_date":predictiondate,"success":success}
     with get_session() as session:
         prediction = Prediction(**kargs)
         session.add(prediction)
-        return prediction
+        session.flush()
+        print(f"En session : {prediction.prediction_id}")
+        return prediction.prediction_id
 
 def get_prediction(prediction_id):
     with get_session() as session:
@@ -29,4 +34,4 @@ def create_feedback(predictionid,value):
             raise ValueError(f"Impossible de récuperer la prédiction {predictionid} lors de la creation du feedback")
         feedback = FeedBack(**kargs)
         session.add(feedback)
-        return feedback
+        return feedback.feedback_id

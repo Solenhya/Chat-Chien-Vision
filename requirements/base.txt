@@ -25,3 +25,5 @@ python-dotenv
 #AJOUT
 sqlalchemy
 alembic
+psycopg2
+pydantic

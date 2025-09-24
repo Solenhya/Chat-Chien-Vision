@@ -8,12 +8,18 @@ ROOT_DIR = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
 from .routes import router
+from src.database.postgresql.db_creation import create_db_simple
 
 app = FastAPI(
     title="Cats vs Dogs Classifier",
     description="API de classification d'images chats vs chiens avec interface web",
     version="1.0.0"
 )
+
+
+@app.on_event("startup")
+def create_tables():
+    create_db_simple()
 
 # Ajouter les routes
 app.include_router(router)

@@ -10,8 +10,8 @@ ROOT_DIR = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
 from config.settings import ROOT_DIR, PROCESSED_DATA_DIR
-from database.postgresql.crud import create_prediction,create_feedback
-from utils.temp_file import save_image
+from src.database.postgresql.crud import create_prediction,create_feedback
+from src.utils.temp_file import save_image
 # Fichier CSV pour stocker les métriques
 MONITORING_FILE = PROCESSED_DATA_DIR / "monitoring_inference.csv"
 
@@ -47,8 +47,9 @@ def log_inference(file_path,inference_time,prediction=None,success:bool = True):
     filepath = file_path
     date = datetime.now().isoformat()
     #Creer la prediction
-    prediction = create_prediction(file_path=filepath,prediction=prediction,predictiontime=inference_time,predictiondate=date,success=success)
-    return prediction.prediction_id
+    prediction_id = create_prediction(file_path=filepath,prediction=prediction,predictiontime=inference_time,predictiondate=date,success=success)
+    print(f"prediction_id:{prediction_id}")
+    return prediction_id
 
 def log_feedback(predictionid,value):
     """Fonction pour logger le feedback. Version qui fait appel a la base de donnée"""
@@ -68,8 +69,8 @@ def time_inference(func):
             # Calculer le temps en millisecondes
             inference_time_ms = (end_time - start_time) * 1000
             await file.seek(0)
-            image_data = file.read()
-            filepath = save_image(imagedata=image_data,imagename=file.name)
+            image_data =await file.read()
+            filepath = save_image(imagedata=image_data,imagename=file.filename)
             # Extraire les informations du résultat si possible
             if hasattr(result, 'body'):
                 # FastAPI Response object
@@ -85,11 +86,14 @@ def time_inference(func):
                     response_data["prediction_id"]=prediction_id
                     result.body = json.dumps(response_data)
                 except:
-                    log_inference(file_path=filepath,inference_time=inference_time_ms,prediction=None,sucess=False)
+                    log_inference(file_path=filepath,inference_time=inference_time_ms,prediction=None,success=False)
+                    print("Erreur dans la récuperation du body")
 
             else:
                 # Dict response
-                log_inference(file_path=filepath,inference_time=inference_time_ms,prediction=None,sucess=False)
+                prediction = result["prediction"]
+                prediction_id = log_inference(file_path=filepath,inference_time=inference_time_ms,prediction=prediction,success=True)
+                result["prediction_id"]=prediction_id
             return result
             
         except Exception as e:

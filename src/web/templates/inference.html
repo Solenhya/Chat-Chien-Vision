@@ -47,6 +47,18 @@
                 </div>
                 
                 <div id="result" class="mt-4" style="display: none;"></div>
+                <div id="feedback" class="d-none container mt-5 text-center">  
+                    <div class="btn-group" role="group" aria-label="Feedback buttons">
+                        <button id ="likebutton" type="button" class="btn btn-success">
+                        <i class="bi bi-hand-thumbs-up"></i> Like
+                        </button>
+                        <button id="dislikebutton" type="button" class="btn btn-danger">
+                        <i class="bi bi-hand-thumbs-down"></i> Dislike
+                        </button>
+                    </div>
+                    <div id="InfoRetour"></div>
+                </div>
+
                 {% endif %}
             </div>
         </div>
@@ -56,6 +68,7 @@
 
 {% block scripts %}
 <script>
+let prediction_id = null
 document.getElementById('imageFile').addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (file) {
@@ -137,6 +150,8 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
         }
         
         result.style.display = 'block';
+        prediction_id = data["prediction_id"]
+        show_feedback();
         
     } catch (error) {
         result.innerHTML = `
@@ -151,5 +166,71 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
     loading.style.display = 'none';
     predictBtn.disabled = false;
 });
+
+const feedbackcont = document.getElementById("feedback")
+const fbupbutton=document.getElementById("likebutton")
+const fbdownbutton = document.getElementById("dislikebutton")
+
+
+function show_feedback(){
+    feedbackcont.classList.remove("d-none")
+}
+
+function hide_feedback(){
+    feedbackcont.classList.add("d-none")
+}
+
+fbupbutton.addEventListener("click",async ()=>{
+    let retour = await sendFeedBack(1);
+    if(retour){
+        console.log("Merci pour le feedback")
+    }else{
+        console.log('Erreur : ${prediction_id}')
+    }
+})
+fbdownbutton.addEventListener("click",async ()=>{
+    let retour = await sendFeedBack(-1);
+    if(retour){
+        console.log("Merci pour le feedback")
+        
+    }else{
+        console.log("Erreur")
+    }
+})
+
+async function sendFeedBack(feedbackValue){
+    if(prediction_id==null){
+        console.log("prediction_id null")
+        return false;
+    }
+    const apiFeedBackUrl = `/sendfeedback`;
+    try{
+        const response = await fetch(apiFeedBackUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        prediction_id: prediction_id,
+                        feedbackvalue: feedbackValue
+                    })
+                });
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            console.log('Feedback envoyé avec succès !');
+            return true;
+        } else {
+            console.error('Erreur lors de l\'envoi du feedback.');
+            return false;
+        }
+    }catch(error){
+        console.error('Erreur réseau :', error);
+        return false;
+    }
+
+
+}
+
 </script>
 {% endblock %}

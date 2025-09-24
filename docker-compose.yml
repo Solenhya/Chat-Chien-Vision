@@ -10,19 +10,22 @@ services:
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
     ports:
-      - "5432:5432"
-      
+      - "5442:5432"
+    env_file:
+      - .env
+
   app_chat_chien:
+    env_file:
+      - .env
     volumes:
-      - $VOLUMES/tmp:/tmp
+      - ${VOLUMES}/tmp:/tmp
     build:
       context: .       # la ou le dockerfile est (arborescence)
       dockerfile: Dockerfile.fastapi 
     image: chat-chien:latest  # Optionel : le nom
     ports:
       - "8000:8000"
-    environment:
-      - ENV=production
+
 
 volumes:
   postgres_data:
