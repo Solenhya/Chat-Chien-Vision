@@ -11,6 +11,7 @@ sys.path.insert(0, str(ROOT_DIR))
 
 from config.settings import ROOT_DIR, PROCESSED_DATA_DIR
 from database.postgresql.crud import create_prediction,create_feedback
+from utils.temp_file import save_image
 # Fichier CSV pour stocker les métriques
 MONITORING_FILE = PROCESSED_DATA_DIR / "monitoring_inference.csv"
 
@@ -39,10 +40,11 @@ def log_inference_time(inference_time_ms: float, success: bool = True):
             success
         ])
 
-def log_inference(file,prediction,inference_time,success:bool = True):
+def log_inference(file_path,inference_time,prediction=None,success:bool = True):
     """Une fonction pour logger dans la base de donnée une prediction effectuer"""
     #Sauvegarde le fichier dans un dossier temporaire TODO
-    filepath = file
+
+    filepath = file_path
     date = datetime.now().isoformat()
     #Creer la prediction
     prediction = create_prediction(file_path=filepath,prediction=prediction,predictiontime=inference_time,predictiondate=date,success=success)
@@ -58,34 +60,36 @@ def time_inference(func):
     @wraps(func)
     async def wrapper(file,*args, **kwargs):
         start_time = time.perf_counter()
-        
+        filepath=None
         try:
             result = await func(file,*args, **kwargs)
             end_time = time.perf_counter()
             
             # Calculer le temps en millisecondes
             inference_time_ms = (end_time - start_time) * 1000
-            
+            await file.seek(0)
+            image_data = file.read()
+            filepath = save_image(imagedata=image_data,imagename=file.name)
             # Extraire les informations du résultat si possible
             if hasattr(result, 'body'):
                 # FastAPI Response object
                 import json
                 try:
                     response_data = json.loads(result.body)
-                    
-                    log_inference_time(
-                        inference_time_ms=inference_time_ms,
+                    prediction = response_data["prediction"]
+                    prediction_id = log_inference(file_path=filepath,
+                        prediction=prediction,
+                        inference_time=inference_time_ms,
                         success=True
                     )
+                    response_data["prediction_id"]=prediction_id
+                    result.body = json.dumps(response_data)
                 except:
-                    log_inference_time(inference_time_ms, success=True)
+                    log_inference(file_path=filepath,inference_time=inference_time_ms,prediction=None,sucess=False)
+
             else:
                 # Dict response
-                log_inference_time(
-                    inference_time_ms=inference_time_ms,
-                    success=True
-                )
-            result["prediction_id"]="bla"#TODO
+                log_inference(file_path=filepath,inference_time=inference_time_ms,prediction=None,sucess=False)
             return result
             
         except Exception as e:
@@ -93,10 +97,8 @@ def time_inference(func):
             inference_time_ms = (end_time - start_time) * 1000
             
             # Logger l'erreur
-            log_inference_time(
-                inference_time_ms=inference_time_ms,
-                success=False
-            )
+            log_inference(file_path=filepath,inference_time=inference_time_ms,prediction=None,success=False)
+
             
             raise e
     
