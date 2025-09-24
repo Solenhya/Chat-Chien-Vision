@@ -21,3 +21,7 @@ numpy
 httpx
 requests
 python-dotenv
+
+#AJOUT
+sqlalchemy
+alembic

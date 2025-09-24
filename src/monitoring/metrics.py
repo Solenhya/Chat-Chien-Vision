@@ -10,7 +10,7 @@ ROOT_DIR = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
 from config.settings import ROOT_DIR, PROCESSED_DATA_DIR
-
+from database.postgresql.crud import create_prediction,create_feedback
 # Fichier CSV pour stocker les métriques
 MONITORING_FILE = PROCESSED_DATA_DIR / "monitoring_inference.csv"
 
@@ -39,14 +39,28 @@ def log_inference_time(inference_time_ms: float, success: bool = True):
             success
         ])
 
+def log_inference(file,prediction,inference_time,success:bool = True):
+    """Une fonction pour logger dans la base de donnée une prediction effectuer"""
+    #Sauvegarde le fichier dans un dossier temporaire TODO
+    filepath = file
+    date = datetime.now().isoformat()
+    #Creer la prediction
+    prediction = create_prediction(file_path=filepath,prediction=prediction,predictiontime=inference_time,predictiondate=date,success=success)
+    return prediction.prediction_id
+
+def log_feedback(predictionid,value):
+    """Fonction pour logger le feedback. Version qui fait appel a la base de donnée"""
+    feedback=create_feedback(predictionid,value)
+    return feedback.feedback_id
+
 def time_inference(func):
     """Décorateur pour mesurer le temps d'inférence"""
     @wraps(func)
-    async def wrapper(*args, **kwargs):
+    async def wrapper(file,*args, **kwargs):
         start_time = time.perf_counter()
         
         try:
-            result = await func(*args, **kwargs)
+            result = await func(file,*args, **kwargs)
             end_time = time.perf_counter()
             
             # Calculer le temps en millisecondes
@@ -58,6 +72,7 @@ def time_inference(func):
                 import json
                 try:
                     response_data = json.loads(result.body)
+                    
                     log_inference_time(
                         inference_time_ms=inference_time_ms,
                         success=True
@@ -70,7 +85,7 @@ def time_inference(func):
                     inference_time_ms=inference_time_ms,
                     success=True
                 )
-            
+            result["prediction_id"]="bla"#TODO
             return result
             
         except Exception as e:
