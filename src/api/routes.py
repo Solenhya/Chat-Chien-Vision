@@ -4,6 +4,7 @@ from fastapi.templating import Jinja2Templates
 import sys
 from pathlib import Path
 import time
+from pydantic import BaseModel
 
 # Ajouter le répertoire racine au path
 ROOT_DIR = Path(__file__).parent.parent.parent
@@ -11,7 +12,7 @@ sys.path.insert(0, str(ROOT_DIR))
 
 from .auth import verify_token
 from src.models.predictor import CatDogPredictor
-from src.monitoring.metrics import time_inference, log_inference_time
+from src.monitoring.metrics import time_inference, log_inference_time , log_feedback
 
 # Configuration des templates
 TEMPLATES_DIR = ROOT_DIR / "src" / "web" / "templates"
@@ -128,3 +129,20 @@ async def health_check():
         "status": "healthy",
         "model_loaded": predictor.is_loaded()
     }
+
+from uuid import UUID
+
+class FeedbackRequest(BaseModel):
+    prediction_id: UUID
+    feedbackvalue: int
+
+@router.post("/sendfeedback")
+async def send_feedback(request:FeedbackRequest):
+    prediction_id = request.prediction_id
+    feedbackvalue = request.feedbackvalue
+    try:
+        log_feedback(predictionid=prediction_id,value=feedbackvalue)
+        return{"status":"success"}
+    except Exception as e:
+        print(f"Erreur lors de l'enregistrement du feedback : {e}")
+        return{"status":"failure"}

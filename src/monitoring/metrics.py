@@ -10,7 +10,8 @@ ROOT_DIR = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
 from config.settings import ROOT_DIR, PROCESSED_DATA_DIR
-
+from src.database.postgresql.crud import create_prediction,create_feedback
+from src.utils.temp_file import save_image
 # Fichier CSV pour stocker les métriques
 MONITORING_FILE = PROCESSED_DATA_DIR / "monitoring_inference.csv"
 
@@ -39,38 +40,59 @@ def log_inference_time(inference_time_ms: float, success: bool = True):
             success
         ])
 
+def log_inference(file_path,inference_time,prediction=None,success:bool = True):
+    """Une fonction pour logger dans la base de donnée une prediction effectuer"""
+    #Sauvegarde le fichier dans un dossier temporaire TODO
+
+    filepath = file_path
+    date = datetime.now().isoformat()
+    #Creer la prediction
+    prediction_id = create_prediction(file_path=filepath,prediction=prediction,predictiontime=inference_time,predictiondate=date,success=success)
+    return prediction_id
+
+def log_feedback(predictionid,value):
+    """Fonction pour logger le feedback. Version qui fait appel a la base de donnée"""
+    feedback=create_feedback(predictionid,value)
+    return feedback
+
 def time_inference(func):
     """Décorateur pour mesurer le temps d'inférence"""
     @wraps(func)
-    async def wrapper(*args, **kwargs):
+    async def wrapper(file,*args, **kwargs):
         start_time = time.perf_counter()
-        
+        filepath=None
         try:
-            result = await func(*args, **kwargs)
+            result = await func(file,*args, **kwargs)
             end_time = time.perf_counter()
             
             # Calculer le temps en millisecondes
             inference_time_ms = (end_time - start_time) * 1000
-            
+            await file.seek(0)
+            image_data =await file.read()
+            filepath = save_image(imagedata=image_data,imagename=file.filename)
             # Extraire les informations du résultat si possible
             if hasattr(result, 'body'):
                 # FastAPI Response object
                 import json
                 try:
                     response_data = json.loads(result.body)
-                    log_inference_time(
-                        inference_time_ms=inference_time_ms,
+                    prediction = response_data["prediction"]
+                    prediction_id = log_inference(file_path=filepath,
+                        prediction=prediction,
+                        inference_time=inference_time_ms,
                         success=True
                     )
+                    response_data["prediction_id"]=prediction_id
+                    result.body = json.dumps(response_data)
                 except:
-                    log_inference_time(inference_time_ms, success=True)
+                    log_inference(file_path=filepath,inference_time=inference_time_ms,prediction=None,success=False)
+                    print("Erreur dans la récuperation du body")
+
             else:
                 # Dict response
-                log_inference_time(
-                    inference_time_ms=inference_time_ms,
-                    success=True
-                )
-            
+                prediction = result["prediction"]
+                prediction_id = log_inference(file_path=filepath,inference_time=inference_time_ms,prediction=prediction,success=True)
+                result["prediction_id"]=prediction_id
             return result
             
         except Exception as e:
@@ -78,10 +100,8 @@ def time_inference(func):
             inference_time_ms = (end_time - start_time) * 1000
             
             # Logger l'erreur
-            log_inference_time(
-                inference_time_ms=inference_time_ms,
-                success=False
-            )
+            log_inference(file_path=filepath,inference_time=inference_time_ms,prediction=None,success=False)
+
             
             raise e
     
