@@ -209,3 +209,6 @@ __marimo__/
 
 # Ignorer les données locales Docker
 /local/
+
+# Ignorer les données grafana
+/grafana-data/

@@ -1,4 +1,4 @@
-from sqlalchemy import Integer, String,ForeignKey,Date,Time , Boolean,Float
+from sqlalchemy import Integer, String,ForeignKey,Date,Time,DateTime , Boolean,Float
 from sqlalchemy.orm import relationship , mapped_column , Mapped
 from sqlalchemy.dialects.postgresql import UUID
 from .database import Base
@@ -16,7 +16,7 @@ class Prediction(Base):
     success= mapped_column(Boolean)
     prediction = mapped_column(String)
     prediction_time=mapped_column(Float)
-    prediction_date = mapped_column(Date)
+    prediction_date = mapped_column(DateTime)
     feedback : Mapped["FeedBack"] = relationship(back_populates="prediction")
 
 class FeedBack(Base):

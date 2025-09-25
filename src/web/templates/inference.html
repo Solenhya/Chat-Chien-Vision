@@ -212,10 +212,6 @@ async function sendFeedBack(feedbackValue){
     }
     const apiFeedBackUrl = `/api/sendfeedback`;
     try{
-        console.log(JSON.stringify({
-                        prediction_id: prediction_id,
-                        feedbackvalue: feedbackValue
-                    }))
         const response = await fetch(apiFeedBackUrl, {
                     method: 'POST',
                     headers: {
