@@ -210,7 +210,7 @@ async function sendFeedBack(feedbackValue){
         console.log("prediction_id null")
         return false;
     }
-    const apiFeedBackUrl = `/sendfeedback`;
+    const apiFeedBackUrl = `/api/sendfeedback`;
     try{
         console.log(JSON.stringify({
                         prediction_id: prediction_id,
