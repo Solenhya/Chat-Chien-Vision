@@ -31,10 +31,10 @@ jobs:
       run: |
         docker compose exec -T app_chat_chien pip install -r requirements/dev.txt
 
-    - name: Run tests inside app container
+    - name: Run tests inside app container #Via python car pytest pas dans le path et -s car il n'a pas acces au standard in and out
       run: |
-        docker compose exec -T app_chat_chien pytest
-
+        docker compose exec -T app_chat_chien python -m pytest -s
+    
     - name: Shut down services
       if: always()
       run: docker compose down -v
