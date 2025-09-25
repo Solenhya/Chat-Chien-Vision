@@ -246,6 +246,101 @@ class TestAPIResponseFormat:
         assert probs["cat"].endswith("%")
         assert probs["dog"].endswith("%")
 
+import psycopg2
+import os 
+from dotenv import load_dotenv
+load_dotenv()
+
+
+@pytest.fixture
+def db_cursor():
+    """Fixture Pytest qui fournit un curseur PostgreSQL et ferme tout automatiquement"""
+    conn = psycopg2.connect(
+        host=os.getenv("POSTGRES_HOST"),
+        database=os.getenv("POSTGRES_DB"),
+        user=os.getenv("POSTGRES_USER"),
+        password=os.getenv("POSTGRES_PASSWORD")
+    )
+    cur = conn.cursor()
+    try:
+        yield cur  # le test peut utiliser le curseur ici
+        conn.commit()  # commit automatique après le test si besoin
+    finally:
+        cur.close()
+        conn.close()
+
+class TestDBConnection:
+
+    def test_connection(self,db_cursor):
+        try:
+            db_cursor.execute("SELECT 1;")
+        except Exception as e:
+            pytest.fail("La connection a la base de donnée a échouée")
+
+    def test_table_presence(self,db_cursor):
+        try:
+            # On interroge le catalogue PostgreSQL pour vérifier l’existence des tables
+            db_cursor.execute("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'prediction'
+                );
+            """)
+            assert db_cursor.fetchone()[0], "La table 'Prediction' est absente"
+
+            db_cursor.execute("""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = 'feedback'
+                );
+            """)
+            assert db_cursor.fetchone()[0], "La table 'feeback' est absente"
+        except Exception as e:
+            pytest.fail(f"La connection a la base de donnée a échouée : {e}")
+
+    def test_prediction_monitoring(self,db_cursor,test_image):
+        headers = {"Authorization": f"Bearer {TOKEN}"}
+        
+        with open(test_image, "rb") as f:
+            files = {"file": (test_image.name, f, "image/jpeg")}
+            response = requests.post(
+                f"{BASE_URL}/api/predict", 
+                files=files, 
+                headers=headers,
+                timeout=30
+            )
+        assert response.status_code==200
+        data = response.json()
+        try:
+            prediction_id = data["prediction_id"]
+        except:
+            pytest.fail("La reponse ne contient pas l'id de la prédiction")
+            raise
+        db_cursor.execute("SELECT * FROM prediction WHERE prediction.prediction_id=%s",(prediction_id,))
+        # Récupérer toutes les lignes
+        rows = db_cursor.fetchall()
+        # Vérifier qu'il y a exactement une ligne
+        assert len(rows) == 1, f"Erreur lors de la récuperation de la prédiction : {len(rows)}"
+        headers= {'Content-Type': 'application/json'}
+        body={    "prediction_id": prediction_id,
+                "feedbackvalue": 1}
+        response_feedback = requests.post(f"{BASE_URL}/api/sendfeedback",headers=headers,json=body)
+        assert response_feedback.status_code == 200
+
+        data_feedback = response_feedback.json()
+        try:
+            feedback_status = data_feedback["status"]
+        except:
+            pytest.fail("La reponse du feedback n'avais pas de status")
+        assert feedback_status=="success"
+        db_cursor.execute("SELECT * FROM feedback WHERE feedback.prediction_id=%s",(prediction_id,))
+        # Récupérer toutes les lignes
+        rows = db_cursor.fetchall()
+        # Vérifier qu'il y a exactement une ligne
+        assert len(rows) == 1, f"Erreur lors de la récuperation du feedback il y a {len(rows)} entrées"
+
+
+
 # Tests paramétrés pour plusieurs endpoints
 @pytest.mark.parametrize("endpoint,expected_status", [
     ("/", 200),
