@@ -13,7 +13,6 @@ def create_prediction(file_path,success,prediction=None,predictiontime=None,pred
         prediction = Prediction(**kargs)
         session.add(prediction)
         session.flush()
-        print(f"En session : {prediction.prediction_id}")
         return prediction.prediction_id
 
 def get_prediction(prediction_id):
@@ -32,6 +31,9 @@ def create_feedback(predictionid,value):
             prediction = get_prediction(predictionid)
         except ValueError as e:
             raise ValueError(f"Impossible de récuperer la prédiction {predictionid} lors de la creation du feedback")
+
         feedback = FeedBack(**kargs)
         session.add(feedback)
+        session.flush()
         return feedback.feedback_id
+    

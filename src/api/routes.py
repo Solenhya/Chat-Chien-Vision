@@ -130,13 +130,16 @@ async def health_check():
         "model_loaded": predictor.is_loaded()
     }
 
+from uuid import UUID
 
 class FeedbackRequest(BaseModel):
-    prediction_id: int
-    feedbackvalue: str
+    prediction_id: UUID
+    feedbackvalue: int
 
 @router.post("/sendfeedback")
-async def send_feedback(prediction_id,feedbackvalue):
+async def send_feedback(request:FeedbackRequest):
+    prediction_id = request.prediction_id
+    feedbackvalue = request.feedbackvalue
     try:
         log_feedback(predictionid=prediction_id,value=feedbackvalue)
         return{"status":"success"}

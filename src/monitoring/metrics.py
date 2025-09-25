@@ -48,13 +48,12 @@ def log_inference(file_path,inference_time,prediction=None,success:bool = True):
     date = datetime.now().isoformat()
     #Creer la prediction
     prediction_id = create_prediction(file_path=filepath,prediction=prediction,predictiontime=inference_time,predictiondate=date,success=success)
-    print(f"prediction_id:{prediction_id}")
     return prediction_id
 
 def log_feedback(predictionid,value):
     """Fonction pour logger le feedback. Version qui fait appel a la base de donnée"""
     feedback=create_feedback(predictionid,value)
-    return feedback.feedback_id
+    return feedback
 
 def time_inference(func):
     """Décorateur pour mesurer le temps d'inférence"""
