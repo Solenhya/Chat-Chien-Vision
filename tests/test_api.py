@@ -291,7 +291,7 @@ class TestDBConnection:
             db_cursor.execute("""
                 SELECT EXISTS (
                     SELECT FROM information_schema.tables 
-                    WHERE table_name = 'feeback'
+                    WHERE table_name = 'feedback'
                 );
             """)
             assert db_cursor.fetchone()[0], "La table 'feeback' est absente"
