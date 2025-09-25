@@ -30,6 +30,17 @@ jobs:
     - name: Install les librairies de test
       run: |
         docker compose exec -T app_chat_chien pip install -r requirements/dev.txt
+    - name: Wait for API to be ready
+      run: |
+        timeout=30
+        while ! docker compose exec -T app_chat_chien curl -s http://localhost:8000/health; do
+          sleep 2
+          timeout=$((timeout-2))
+          if [ $timeout -le 0 ]; then
+            echo "API did not start in time!"
+            exit 1
+          fi
+        done
 
     - name: Run tests inside app container #Via python car pytest pas dans le path et -s car il n'a pas acces au standard in and out
       run: |
