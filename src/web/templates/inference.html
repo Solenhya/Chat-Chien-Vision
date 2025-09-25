@@ -56,9 +56,9 @@
                         <i class="bi bi-hand-thumbs-down"></i> Dislike
                         </button>
                     </div>
-                    <div id="InfoRetour"></div>
-                </div>
 
+                </div>
+                <div id="InfoRetour"></div>
                 {% endif %}
             </div>
         </div>
@@ -170,7 +170,7 @@ document.getElementById('predictionForm').addEventListener('submit', async funct
 const feedbackcont = document.getElementById("feedback")
 const fbupbutton=document.getElementById("likebutton")
 const fbdownbutton = document.getElementById("dislikebutton")
-
+const retourTextField = document.getElementById("InfoRetour")
 
 function show_feedback(){
     feedbackcont.classList.remove("d-none")
@@ -183,20 +183,27 @@ function hide_feedback(){
 fbupbutton.addEventListener("click",async ()=>{
     let retour = await sendFeedBack(1);
     if(retour){
-        console.log("Merci pour le feedback")
+        hide_feedback()
+        retourTextField.innerHTML = "Merci pour le feedback"
+
     }else{
+        retourTextField.innerHTML="Une erreur est survenu lors de l'envoi de votre feedback"
         console.log('Erreur : ${prediction_id}')
     }
 })
 fbdownbutton.addEventListener("click",async ()=>{
     let retour = await sendFeedBack(-1);
     if(retour){
-        console.log("Merci pour le feedback")
+        hide_feedback()
+        retourTextField.innerHTML = "Merci pour le feedback"
         
     }else{
-        console.log("Erreur")
+        retourTextField.innerHTML="Une erreur est survenu lors de l'envoi de votre feedback"
+        console.log('Erreur : ${prediction_id}')
     }
 })
+
+
 
 async function sendFeedBack(feedbackValue){
     if(prediction_id==null){
