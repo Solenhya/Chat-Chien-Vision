@@ -296,9 +296,9 @@ class TestDBConnection:
             """)
             assert db_cursor.fetchone()[0], "La table 'feeback' est absente"
         except Exception as e:
-            pytest.fail("La connection a la base de donnée a échouée")
+            pytest.fail(f"La connection a la base de donnée a échouée : {e}")
 
-    def test_prediction_monitoring(self,db_cursor):
+    def test_prediction_monitoring(self,db_cursor,test_image):
         headers = {"Authorization": f"Bearer {TOKEN}"}
         
         with open(test_image, "rb") as f:
