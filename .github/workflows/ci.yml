@@ -1,8 +1,9 @@
 name: CI
 
 on:
+  workflow_dispatch: # Pour le déclanchement manuel
   push:
-    branches: [ main ]
+    branches: [ main]
 
 jobs:
   test:
@@ -11,23 +12,21 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.11
-    
-    - name: Install dependencies
+    - name: Set up Docker
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build and start services
       run: |
-        pip install -r requirements/base.txt
-        pip install pytest
-    
-    - name: Setup test environment
+        docker compose up -d --build
+    - name: Install les librairies de test
       run: |
-        mkdir -p data/processed/models
-        touch data/processed/models/cats_dogs_model.keras
-    
-    - name: Start API and test
+        docker compose exec -T app_chat_chien pip install -r requirements/dev.txt
+
+    - name: Run tests inside app container
       run: |
-        python scripts/run_api.py &
-        sleep 10
-        python tests/test_api_simple.py
+        docker compose exec -T app_chat_chien pytest
+
+    - name: Shut down services
+      if: always()
+      run: docker compose down -v
+
